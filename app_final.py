@@ -18,7 +18,7 @@ from flask_migrate import Migrate
 
 
 matplotlib.use('Agg')
-migrate = Migrate(app, db)
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -41,6 +41,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 Session(app)
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Define the User model
 class User(db.Model):
@@ -95,6 +96,12 @@ course_colors = {
 
 @app.route('/downloads/<filename>')
 def download_file(filename):
+    # Log the download activity
+    if 'user_id' in session:
+        activity = ActivityLog(user_id=session['user_id'], activity=f"downloaded file: {filename}", timestamp=datetime.utcnow())
+        db.session.add(activity)
+        db.session.commit()
+
     return send_from_directory('downloads', filename)
 
 @app.route('/', methods=['GET', 'POST'])
@@ -113,6 +120,12 @@ def homepage():
             return "No selected file"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
+
+        # Log the upload activity
+        if 'user_id' in session:
+            activity = ActivityLog(user_id=session['user_id'], activity=f"uploaded file: {file.filename}", timestamp=datetime.utcnow())
+            db.session.add(activity)
+            db.session.commit()
 
         # Load the test dataset (read the sheet names to infer the school year)
         xl = pd.ExcelFile(filepath)
@@ -369,6 +382,13 @@ def login():
         # If user exists, check password
         if user and check_password_hash(user.password, password):
             session['username'] = username
+            session['user_id'] = user.id
+
+            # Log the login activity
+            activity = ActivityLog(user_id=user.id, activity="login", timestamp=datetime.utcnow())
+            db.session.add(activity)
+            db.session.commit()
+
             flash('Login successful!', 'success')
             return redirect(url_for('homepage'))
         else:
@@ -404,6 +424,11 @@ def register():
 
 @app.route('/logout')
 def logout():
+    if 'user_id' in session:
+        activity = ActivityLog(user_id=session['user_id'], activity="logout", timestamp=datetime.utcnow())
+        db.session.add(activity)
+        db.session.commit()
+        
     session.pop('username', None)
     flash('You have been logged out!', 'info')
     return redirect(url_for('login'))
