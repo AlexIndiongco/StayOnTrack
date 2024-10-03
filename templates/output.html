@@ -12,56 +12,57 @@
         body {
             font-family: Arial, sans-serif;
             padding: 0;
-            background: #f1f1f1;
+            background: #d1d1d1;
         }
 
-        /* Updated overall retention container to be wider */
-        .overall-retention-container {
-            background: #484848;
-            color: white;
-            padding: 40px;
+        .retention-box {
+            background-color: #484848;
+            color: #f8b21a;
+            width: 740px;  /* Set a fixed width to ensure both boxes have the same size */
+            padding: 60px; /* Consistent padding */
             border-radius: 15px;
             text-align: center;
             font-size: 2.5rem;
-            max-width: 600px; /* Increased width */
-            margin: 40px auto;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            border: 4px solid #F8B21A;
+            border: 4px solid #f8b21a;
         }
 
-        /* Styling for the predicted rate (top part) */
-        .overall-retention-container .predicted-rate {
-            font-size: 4rem;
-            color: #F8B21A;
-            margin-bottom: 20px;
+        .retention-box h3 {
+            font-size: 3rem;
+            font-weight: bolder;
+            color: #f8b21a;
+            margin-bottom: 10px;
         }
 
-        /* Subtext below predicted rate */
-        .overall-retention-container .subtext {
-            color: #F8B21A;
-            font-size: 1.8rem;
-            margin-bottom: 20px;
+        .retention-box h5 {
+            font-size: 1.2rem;
+            color: #f8b21a;
         }
 
-        /* Bottom half with two columns */
-        .overall-retention-container .rates {
+        .retention-box p {
+            color: white;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        /* Flex container settings to ensure equal spacing between boxes */
+        .container-fluid {
             display: flex;
-            justify-content: space-between;
-            font-size: 1.0rem;
-            padding: 20px 50px; /* Adds padding for better alignment */
+            justify-content: center;
+            align-items: center;
+            gap: 20px; /* Add a gap between the two boxes */
         }
 
-        .overall-retention-container .rates .real-rate {
-            color: #f1f1f1;
-        }
+        .small-text {
+        font-size: 1rem; /* Adjust this value to make the text smaller */
+        color: #333; /* Optional: Change the color if needed */
+    }
 
-        .overall-retention-container .rates .error-rate {
-            color: #ff5757;
-        }
 
         /* Course Summary Container Styling */
         .course-summary {
             padding: 50px;
+            margin-bottom: 50px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
@@ -69,8 +70,8 @@
         }
 
         .course-box {
-            background: #F8B21A;
-            color: #484848;
+            background-color: #484848;
+            color: #F8B21A;
             padding: 20px;
             border-radius: 15px;
             text-align: center;
@@ -105,7 +106,7 @@
         }
 
         .course-box .real-retention {
-            color: #484848;
+            color: #ffffff;
         }
 
         .course-box .distribution {
@@ -124,9 +125,6 @@
             color: #f1f1f1;
             font-size: 1.8rem;
         }
-
-       
-
 
         /* Chart container styles */
         .chart-container {
@@ -147,8 +145,8 @@
 
         h2 {
             margin: 40px 0;
-            margin-top: 70px;
-            margin-bottom: 20px;
+            margin-top: 50px;
+            margin-bottom: 10px;
             text-align: center;
         }
 
@@ -178,7 +176,6 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            margin-bottom: 150px;
             height: 50vh;
             display: flex;
             align-items: center;
@@ -215,6 +212,46 @@
             justify-content: center;
         }
 
+        #dashboard {
+        display: flex;
+        justify-content: space-around;
+        padding: 20px;
+        background: #d1d1d1;
+        }
+
+        .dashboard-box {
+            width: 22%; /* Adjust width for 4 containers */
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            border: 3px solid #484848;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 70px;
+            
+        }
+
+        .dashboard-box h6 {
+            font-size: 1rem;
+            font-weight: bolder;
+            color: #f8b21a;
+        }
+
+        .dashboard-box h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .dashboard-box .icon {
+            margin-top: 10px;
+        }
+
+        .dashboard-box .icon img {
+            width: 40px;
+            height: 40px;
+        }
 
     </style>
 </head>
@@ -257,7 +294,70 @@
         </nav>
     </section>
 
-    <!-- Input Section -->
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="d-flex justify-content-around mt-3 mb-4">
+        <!-- 1st Container: School Year and Institute -->
+        <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
+            <h6>School Year & Institute</h6>
+            <h3>{{ institute }} | {{ school_year }}</h3>
+        </div>
+
+        <!-- 2nd Container: Total Number of Students -->
+        <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
+            <h6>Total Students</h6>
+            <h3>{{ total_students }}</h3>
+        </div>
+
+        <!-- 3rd Container: Total Number of Courses -->
+        <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
+            <h6>Total Courses</h6>
+            <h3>{{ total_courses }}</h3>
+        </div>
+
+        <!-- 4th Container: Real Retention Rate -->
+        <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
+            <h6>Real Retention Rate</h6>
+            <h3>{{ "%.2f" % real_retention_rate }}% | {{ real_retained_students }} <span class="small-text">students retained</span></h3>
+        </div>
+    </section>
+
+    <div class="container">
+        <h2 class="text-center">Retention Prediction Summary</h2>
+
+        <!-- Retention Rate Container -->
+        <div class="container-fluid d-flex justify-content-center align-items-center mt-4">
+            <!-- Overall Retention Rate Container -->
+            <div class="retention-box shadow-sm p-4 text-center" style="margin-right: 20px;">
+                <h3>{{ "%.2f" % predicted_retention_rate }}%</h3>
+                <h5>Predicted Overall Retention Rate</h5>
+            </div>
+        
+            <!-- Number of Students Predicted to Retain -->
+            <div class="retention-box shadow-sm p-4 text-center">
+                <h3>{{ predicted_retained_students }}</h3>
+                <h5>Predicted Retained Students</h5>
+            </div>
+        </div>
+
+        <!-- Retention by Course Section -->
+        {% if retention_by_course_summary %}
+        <div class="course-summary">
+            {% for course_summary in retention_by_course_summary %}
+                <div class="course-box">
+                    <div class="predicted">{{ course_summary.predicted_retained_students }}<span class="grey-text-predicted">/{{ course_summary.total_students }}</span></div>
+                    <div class="subtext">{{ course_summary.course }} students predicted to retain</div>
+                    <div class="real-and-distribution">
+                        <div class="real-retention">{{ course_summary.real_retained_students }}<br>confirmed retained</div>
+                        <div class="distribution">{{ "%.2f" % course_summary.retention_distribution }}%<br>Retention Distribution</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Input Section Moved to Bottom -->
     <section id="input" class="py-5 bg-light">
         <div class="container d-flex align-items-center justify-content-center" style="height: 300px;">
             <div class="row">
@@ -278,34 +378,6 @@
             </div>
         </div>
     </section>
-
-    <div class="container">
-
-        <div class="overall-retention-container">
-            <div class="predicted-rate"><strong>{{ "%.2f" % predicted_retention_rate }}%</strong></div>
-            <div class="subtext">Predicted Overall Retention Rate</div>
-            <div class="rates">
-                <div class="real-rate">{{ "%.2f" % real_retention_rate }}%<br>Real Overall Retention Rate</div>
-                <div class="error-rate">{{ "%.2f" % prediction_error }}%<br>Prediction Error</div>
-            </div>
-        </div>
-
-        <!-- Section to display retention by course summary when file input is used -->
-        {% if retention_by_course_summary %}
-        <h2 class="text-center">Retention Prediction Summary</h2>
-        <div class="course-summary">
-            {% for course_summary in retention_by_course_summary %}
-                <div class="course-box">
-                    <div class="predicted">{{ course_summary.predicted_retained_students }}<span class="grey-text-predicted">/{{ course_summary.total_students }}</span></div>
-                    <div class="subtext">{{ course_summary.course }} students predicted to retain</div>
-                    <div class="real-and-distribution">
-                        <div class="real-retention">{{ course_summary.real_retained_students }}<br>actually retained</div>
-                        <div class="distribution">{{ "%.2f" % course_summary.retention_distribution }}%<br>Retention Distribution</div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-        {% endif %}
 
     <!-- Bootstrap JS and dependencies (Optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
