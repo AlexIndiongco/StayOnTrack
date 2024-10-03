@@ -115,56 +115,87 @@ form .row input::placeholder {
 #submit-button {
   margin-bottom: 10px;
 }
+
+.alert-container {
+  margin-bottom: 15px;
+}
+.alert {
+  font-size: 16px;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  text-align: center;
+}
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
 </style>
 </head>
 <body>
-    {% if session.username %}
-    <div class="wrapper" style="display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center; background-color: #cd982f;">
-        <h2>Logged in</h2>
-        <p>Welcome, {{ session.username }}</p>
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </div>
-    {% else %}
-        <div class="wrapper">
-            <div class="title"><span id="form-title">Login Form</span></div>
-            <form method="POST" action="{{ url_for('login') }}" id="auth-form">
-                <div class="row">
-                    <i class="fas fa-user"></i>
-                    <input type="text" name="username" id="username" placeholder="Username" required />
-                </div>
-                <div class="row">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" name="password" id="password" placeholder="Password" required />
-                </div>
-                <div class="row button">
-                    <input type="submit" value="Login" id="submit-button" />
-                </div>
-                <div class="toggle-link">
-                    <a href="#" id="toggle-link">Don't have an account? Register</a>
-                </div>
-            </form>
-        </div>
-    {% endif %}
-<script>
-    document.getElementById('toggle-link').addEventListener('click', function (e) {
-        e.preventDefault();
-        const formTitle = document.getElementById('form-title');
-        const submitButton = document.getElementById('submit-button');
-        const toggleLink = document.getElementById('toggle-link');
-        const authForm = document.getElementById('auth-form');
-        
-        if (formTitle.innerText === 'Login Form') {
-            formTitle.innerText = 'Registration Form';
-            submitButton.value = 'Register';
-            authForm.action = "{{ url_for('register') }}";
-            toggleLink.innerText = 'Already have an account? Login';
-        } else {
-            formTitle.innerText = 'Login Form';
-            submitButton.value = 'Login';
-            authForm.action = "{{ url_for('login') }}";
-            toggleLink.innerText = "Don't have an account? Register";
-        }
-    });
-</script>
+  {% if session.username %}
+  <div class="wrapper" style="display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center; background-color: #cd982f;">
+      <h2>Logged in</h2>
+      <p>Welcome, {{ session.username }}</p>
+      <a href="{{ url_for('logout') }}">Logout</a>
+  </div>
+  {% else %}
+      <div class="wrapper">
+          <div class="title"><span id="form-title">Login Form</span></div>
+
+          <!-- Flash messages block placed inside the wrapper -->
+          <div class="alert-container">
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                      {{ message }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              {% endwith %}
+          </div>
+
+          <form method="POST" action="{{ url_for('login') }}" id="auth-form">
+              <div class="row">
+                  <i class="fas fa-user"></i>
+                  <input type="text" name="username" id="username" placeholder="Username" required />
+              </div>
+              <div class="row">
+                  <i class="fas fa-lock"></i>
+                  <input type="password" name="password" id="password" placeholder="Password" required />
+              </div>
+              <div class="row button">
+                  <input type="submit" value="Login" id="submit-button" />
+              </div>
+              <div class="toggle-link">
+                  <a href="#" id="toggle-link">Don't have an account? Register</a>
+              </div>
+          </form>
+      </div>
+  {% endif %}
+  <script>
+      document.getElementById('toggle-link').addEventListener('click', function (e) {
+          e.preventDefault();
+          const formTitle = document.getElementById('form-title');
+          const submitButton = document.getElementById('submit-button');
+          const toggleLink = document.getElementById('toggle-link');
+          const authForm = document.getElementById('auth-form');
+          
+          if (formTitle.innerText === 'Login Form') {
+              formTitle.innerText = 'Registration Form';
+              submitButton.value = 'Register';
+              authForm.action = "{{ url_for('register') }}";
+              toggleLink.innerText = 'Already have an account? Login';
+          } else {
+              formTitle.innerText = 'Login Form';
+              submitButton.value = 'Login';
+              authForm.action = "{{ url_for('login') }}";
+              toggleLink.innerText = "Don't have an account? Register";
+          }
+      });
+  </script>
 </body>
 </html>
