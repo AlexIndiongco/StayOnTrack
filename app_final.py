@@ -13,9 +13,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score
+from datetime import datetime
+from flask_migrate import Migrate
 
 
 matplotlib.use('Agg')
+migrate = Migrate(app, db)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -44,6 +47,16 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+
+# ActivityLog model for tracking user activities
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    activity = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship with the User
+    user = db.relationship('User', backref=db.backref('activities', lazy=True))
 
 # Method to hash the password
 def set_password(self, password):
