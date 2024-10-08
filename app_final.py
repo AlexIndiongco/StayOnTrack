@@ -104,6 +104,90 @@ def download_file(filename):
 
     return send_from_directory('downloads', filename)
 
+def generate_heatmap_interpretation(corr_matrix):
+    """
+    Categorizes and lists correlations into Positive, Neutral, and Negative based on the thresholds.
+    Positive: Correlations ≥ 0.10
+    Negative: Correlations ≤ -0.10
+    Neutral: Correlations between -0.10 and 0.10 (exclusive).
+    Returns the interpretation in descending order of correlation strength and verbal interpretation.
+    Removes duplicates in correlation pairs like (A, B) and (B, A).
+    """
+    positive_correlations = []
+    neutral_correlations = []
+    negative_correlations = []
+    positive_interpretations = []
+    neutral_interpretations = []
+    negative_interpretations = []
+    
+    seen_pairs = set()  # To track processed pairs
+    
+    # Iterate over the correlation matrix
+    for row in corr_matrix.index:
+        for col in corr_matrix.columns:
+            if row != col and (col, row) not in seen_pairs:  # Skip diagonal and duplicates
+                corr_value = corr_matrix.at[row, col]
+                seen_pairs.add((row, col))  # Mark pair as processed
+
+                # Categorize correlations based on thresholds
+                if corr_value >= 0.10:  # Positive correlation
+                    positive_correlations.append((row, col, corr_value))
+                    positive_interpretations.append(interpret_correlation(row, col, corr_value))
+                elif corr_value <= -0.10:  # Negative correlation
+                    negative_correlations.append((row, col, corr_value))
+                    negative_interpretations.append(interpret_correlation(row, col, corr_value))
+                else:  # Neutral correlation
+                    neutral_correlations.append((row, col, corr_value))
+                    neutral_interpretations.append(interpret_correlation(row, col, corr_value))
+
+    # Sort correlations by absolute value, in descending order
+    positive_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
+    neutral_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
+    negative_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
+
+    return (
+        positive_correlations, neutral_correlations, negative_correlations,
+        positive_interpretations, neutral_interpretations, negative_interpretations
+    )
+
+
+def interpret_correlation(feature1, feature2, correlation_value):
+    """
+    Generates a verbal interpretation of the correlation between two features.
+    
+    Parameters:
+    - feature1: The name of the first feature (e.g., "RETAINED").
+    - feature2: The name of the second feature (e.g., "PASSED").
+    - correlation_value: The correlation value between the two features (e.g., 0.87).
+    
+    Returns:
+    - A string that explains the meaning of the correlation.
+    """
+    abs_value = abs(correlation_value)
+    
+    # Determine the strength of the correlation
+    if abs_value > 0.7:
+        strength = "strong"
+    elif abs_value > 0.3:
+        strength = "moderate"
+    elif abs_value >= 0.1:
+        strength = "weak"
+    else:
+        strength = "no significant"
+
+    # Determine the direction of the correlation
+    if correlation_value > 0:
+        direction = "positive"
+        interpretation = f"There is {strength} {direction} correlation between {feature1} and {feature2}. As {feature1} increases, {feature2} also tends to increase."
+    elif correlation_value < 0:
+        direction = "negative"
+        interpretation = f"There is {strength} {direction} correlation between {feature1} and {feature2}. As {feature1} increases, {feature2} tends to decrease."
+    else:
+        interpretation = f"There is no significant correlation between {feature1} and {feature2}."
+
+    return interpretation
+
+
 @app.route('/', methods=['GET', 'POST'])
 def homepage():
 
@@ -111,6 +195,8 @@ def homepage():
         flash('Please log in to access this page.', 'warning')
         return redirect(url_for('login'))
     
+    year_levels = []
+
     if request.method == 'POST':
         # Handle file upload
         if 'file' not in request.files:
@@ -140,7 +226,7 @@ def homepage():
         else:
             school_year = "Unknown"
 
-        institute = "SEA School"
+        institute = "SEA"
 
         # Load the test data from the first sheet (assuming it’s the first sheet)
         test_data = xl.parse(sheet_names[0])
@@ -150,6 +236,11 @@ def homepage():
 
         # Total number of unique courses in the dataset
         total_courses = len(test_data['COURSE'].unique()) if 'COURSE' in test_data.columns else 0
+
+        if 'YEAR LEVEL' in test_data.columns:
+            year_levels = test_data['YEAR LEVEL'].unique().tolist()
+        else:
+            flash('Year Level column not found in the dataset.', 'danger')
 
         # Load the test dataset
         test_data = pd.read_excel(filepath)
@@ -246,6 +337,7 @@ def homepage():
         numeric_data = pd.concat([numeric_data, test_data[['GENDER_1', 'ENROLLMENT STATUS_1']]], axis=1)
         numeric_data = numeric_data.drop(columns=['YEAR LEVEL', 'STUDENT NO'], errors='ignore')
         corr_matrix = numeric_data.corr()
+        heatmap_interpretation = generate_heatmap_interpretation(corr_matrix)
 
         # Manually set display labels
         display_labels = corr_matrix.columns.tolist()
@@ -325,6 +417,9 @@ def homepage():
         session['correlation_heatmap_plot'] = correlation_heatmap_plot
         session['retention_by_course_plot'] = retention_by_course_plot
         session['accuracy_by_course_plot'] = accuracy_by_course_plot
+        session['heatmap_interpretation'] = heatmap_interpretation
+        session['test_data'] = test_data.to_dict()  # Store test data as dictionary in the session
+
 
 
         # Render the output template
@@ -344,7 +439,9 @@ def homepage():
             institute=institute,
             total_students=total_students,
             total_courses=total_courses,
-            predicted_retained_students=predicted_retained_students
+            predicted_retained_students=predicted_retained_students,
+            heatmap_interpretation=heatmap_interpretation,
+            year_levels=year_levels
         )
 
     return render_template('index.html')
@@ -357,17 +454,43 @@ def metricspage():
     retention_by_course_plot = session.get('retention_by_course_plot')
     accuracy_by_course_plot = session.get('accuracy_by_course_plot')
 
-    # If any plots are missing, show a message
-    if not feature_importance_plot or not correlation_heatmap_plot or not retention_by_course_plot or not accuracy_by_course_plot:
-        return "No plots available. Please upload a file first to generate the metrics."
+    # Assuming test_data is already stored in session from the homepage route
+    test_data = session.get('test_data')
 
-    # Render the metricspage.html with the available plots
+    if test_data is None:
+        return "Test data is not available. Please upload a file first."
+
+    # Convert test data back into a DataFrame
+    test_data = pd.DataFrame(test_data)
+
+    # Preprocess test data for correlation calculation
+    numeric_data = test_data.select_dtypes(include=[np.float64, np.int64, np.uint8])
+    if 'GENDER_1' in test_data.columns and 'ENROLLMENT STATUS_1' in test_data.columns:
+        numeric_data = pd.concat([numeric_data, test_data[['GENDER_1', 'ENROLLMENT STATUS_1']]], axis=1)
+    numeric_data = numeric_data.drop(columns=['YEAR LEVEL', 'STUDENT NO'], errors='ignore')
+    
+    # Calculate correlation matrix
+    corr_matrix = numeric_data.corr()
+
+    # Generate categorized interpretations (positive, neutral, negative)
+    (
+        positive_correlations, neutral_correlations, negative_correlations,
+        positive_interpretations, neutral_interpretations, negative_interpretations
+    ) = generate_heatmap_interpretation(corr_matrix)
+
+    # Render the metricspage.html with the available plots and categorized correlations
     return render_template(
         'metricspage.html',
         feature_importance=feature_importance_plot,
         correlation_heatmap=correlation_heatmap_plot,
         retention_by_course=retention_by_course_plot,
-        accuracy_by_course=accuracy_by_course_plot
+        accuracy_by_course=accuracy_by_course_plot,
+        positive_correlations=positive_correlations,
+        neutral_correlations=neutral_correlations,
+        negative_correlations=negative_correlations,
+        positive_interpretations=positive_interpretations,
+        neutral_interpretations=neutral_interpretations,
+        negative_interpretations=negative_interpretations
     )
 
 @app.route('/login', methods=['POST', 'GET'])

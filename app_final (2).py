@@ -11,9 +11,11 @@ import base64
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pytz
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score
 from datetime import datetime
+from flask import jsonify
 from flask_migrate import Migrate
 
 
@@ -43,11 +45,51 @@ Session(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+class UserMetrics(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    feature_importance_plot = db.Column(db.Text, nullable=False)  # Base64-encoded image
+    correlation_heatmap_plot = db.Column(db.Text, nullable=False)  # Base64-encoded image
+    retention_by_course_plot = db.Column(db.Text, nullable=False)
+    accuracy_by_course_plot = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship with the User model
+    user = db.relationship('User', backref=db.backref('metricspage', lazy=True))
+
+class UserResults(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    result_file = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship with the User model
+    user = db.relationship('User', backref=db.backref('results', lazy=True))
+    
+class UploadHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship with the User
+    user = db.relationship('User', backref=db.backref('uploads', lazy=True))    
+
+class DownloadHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(pytz.UTC))
+
+    # Relationship with the User
+    user = db.relationship('User', backref=db.backref('downloads', lazy=True))
+
 # Define the User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), nullable=False, default='user')  # Add the role column
 
 # ActivityLog model for tracking user activities
 class ActivityLog(db.Model):
@@ -104,80 +146,9 @@ def download_file(filename):
 
     return send_from_directory('downloads', filename)
 
-def generate_heatmap_interpretation(corr_matrix):
-    """
-    Categorizes and lists correlations into Positive, Neutral, and Negative based on the thresholds.
-    Positive: Correlations ≥ 0.10
-    Negative: Correlations ≤ -0.10
-    Neutral: Correlations between -0.10 and 0.10 (exclusive).
-    Returns the interpretation in descending order of correlation strength.
-    """
-    positive_correlations = []
-    neutral_correlations = []
-    negative_correlations = []
-
-    # Iterate over the correlation matrix
-    for row in corr_matrix.index:
-        for col in corr_matrix.columns:
-            if row != col:  # Skip diagonal (self-correlation)
-                corr_value = corr_matrix.at[row, col]
-
-                # Categorize correlations based on thresholds
-                if corr_value >= 0.10:  # Positive correlation
-                    positive_correlations.append((row, col, corr_value))
-                elif corr_value <= -0.10:  # Negative correlation
-                    negative_correlations.append((row, col, corr_value))
-                else:  # Neutral correlation
-                    neutral_correlations.append((row, col, corr_value))
-    
-    # Sort correlations by absolute value, in descending order
-    positive_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
-    neutral_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
-    negative_correlations.sort(key=lambda x: abs(x[2]), reverse=True)
-
-    return positive_correlations, neutral_correlations, negative_correlations
-
-def interpret_correlation(feature1, feature2, correlation_value):
-    """
-    Generates a verbal interpretation of the correlation between two features.
-    
-    Parameters:
-    - feature1: The name of the first feature (e.g., "RETAINED").
-    - feature2: The name of the second feature (e.g., "PASSED").
-    - correlation_value: The correlation value between the two features (e.g., 0.87).
-    
-    Returns:
-    - A string that explains the meaning of the correlation.
-    """
-    abs_value = abs(correlation_value)
-    
-    # Determine the strength of the correlation
-    if abs_value > 0.7:
-        strength = "strong"
-    elif abs_value > 0.3:
-        strength = "moderate"
-    elif abs_value >= 0.1:
-        strength = "weak"
-    else:
-        strength = "no significant"
-
-    # Determine the direction of the correlation
-    if correlation_value > 0:
-        direction = "positive"
-        interpretation = f"There is {strength} {direction} correlation between {feature1} and {feature2}. As {feature1} increases, {feature2} also tends to increase."
-    elif correlation_value < 0:
-        direction = "negative"
-        interpretation = f"There is {strength} {direction} correlation between {feature1} and {feature2}. As {feature1} increases, {feature2} tends to decrease."
-    else:
-        interpretation = f"There is no significant correlation between {feature1} and {feature2}."
-
-    return interpretation
-
-
 @app.route('/', methods=['GET', 'POST'])
 def homepage():
-
-    if 'username' not in session:
+    if 'email' not in session:
         flash('Please log in to access this page.', 'warning')
         return redirect(url_for('login'))
     
@@ -190,12 +161,15 @@ def homepage():
             return "No selected file"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
-
+        
         # Log the upload activity
         if 'user_id' in session:
             activity = ActivityLog(user_id=session['user_id'], activity=f"uploaded file: {file.filename}", timestamp=datetime.utcnow())
             db.session.add(activity)
             db.session.commit()
+
+        # Load the test dataset
+        test_data = pd.read_excel(filepath)
 
         # Load the test dataset (read the sheet names to infer the school year)
         xl = pd.ExcelFile(filepath)
@@ -210,7 +184,7 @@ def homepage():
         else:
             school_year = "Unknown"
 
-        institute = "SEA"
+        institute = "SEA School"
 
         # Load the test data from the first sheet (assuming it’s the first sheet)
         test_data = xl.parse(sheet_names[0])
@@ -316,7 +290,6 @@ def homepage():
         numeric_data = pd.concat([numeric_data, test_data[['GENDER_1', 'ENROLLMENT STATUS_1']]], axis=1)
         numeric_data = numeric_data.drop(columns=['YEAR LEVEL', 'STUDENT NO'], errors='ignore')
         corr_matrix = numeric_data.corr()
-        heatmap_interpretation = generate_heatmap_interpretation(corr_matrix)
 
         # Manually set display labels
         display_labels = corr_matrix.columns.tolist()
@@ -391,15 +364,55 @@ def homepage():
             accuracy_by_course_plot = base64.b64encode(img_accuracy_rate.getvalue()).decode('utf8')
             plt.close()
 
-        # Store plots in session (server-side)
-        session['feature_importance_plot'] = feature_importance_plot
-        session['correlation_heatmap_plot'] = correlation_heatmap_plot
-        session['retention_by_course_plot'] = retention_by_course_plot
-        session['accuracy_by_course_plot'] = accuracy_by_course_plot
-        session['heatmap_interpretation'] = heatmap_interpretation
-        session['test_data'] = test_data.to_dict()  # Store test data as dictionary in the session
+        # Assuming y_test_pred is your predictions array, and 'RETAINED' is the actual values in the test dataset
+        test_data['Predicted_Retention'] = y_test_pred
+        
+        # Calculate percentage retention for each student
+        test_data['Predicted_Retention_Percentage'] = np.where(test_data['Predicted_Retention'] == 1, 100, 0)
+
+        # If real retention data exists, calculate the actual retention percentage
+        if 'RETAINED' in test_data.columns:
+            test_data['Actual_Retention_Percentage'] = np.where(test_data['RETAINED'] == 1, 100, 0)
+        else:
+            test_data['Actual_Retention_Percentage'] = None  # In case the 'RETAINED' column doesn't exist
+
+        # Add course-level summary percentages (e.g., retention rate per course)
+        if 'COURSE' in test_data.columns:
+            course_groups = test_data.groupby('COURSE')
+            course_summary = course_groups['Predicted_Retention'].mean() * 100
+            test_data = test_data.merge(course_summary.rename('Course_Retention_Rate'), on='COURSE', how='left')
+
+        # Save the predictions and percentages to a CSV file
+        result_file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"predictions_{file.filename.split('.')[0]}.csv")
+        test_data.to_csv(result_file_path, index=False)  # Save the prediction results as CSV
+
+        if 'user_id' in session:
+            result_entry = UserResults(user_id=session['user_id'], result_file=result_file_path, timestamp=datetime.utcnow())
+            db.session.add(result_entry)
+            db.session.commit()
+        
+        if 'user_id' in session:
+            metrics_entry = UserMetrics(
+                user_id=session['user_id'],
+                feature_importance_plot=feature_importance_plot,
+                correlation_heatmap_plot=correlation_heatmap_plot,
+                retention_by_course_plot=retention_by_course_plot,
+                accuracy_by_course_plot=accuracy_by_course_plot,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(metrics_entry)
+            db.session.commit()
+
+        # Log the upload activity
+        if 'user_id' in session:
+            # Log to UploadHistory
+            upload_entry = UploadHistory(user_id=session['user_id'], file_name=file.filename, timestamp=datetime.utcnow())
+            db.session.add(upload_entry)
+            db.session.commit()
 
 
+        # Log the filename in session for later download
+        session['result_file_path'] = result_file_path
 
         # Render the output template
         return render_template(
@@ -419,65 +432,73 @@ def homepage():
             total_students=total_students,
             total_courses=total_courses,
             predicted_retained_students=predicted_retained_students,
-            heatmap_interpretation=heatmap_interpretation
+            result_file_name=os.path.basename(result_file_path)
         )
 
     return render_template('index.html')
 
 @app.route('/metricspage', methods=['GET'])
 def metricspage():
-    # Retrieve plots from the session (server-side)
-    feature_importance_plot = session.get('feature_importance_plot')
-    correlation_heatmap_plot = session.get('correlation_heatmap_plot')
-    retention_by_course_plot = session.get('retention_by_course_plot')
-    accuracy_by_course_plot = session.get('accuracy_by_course_plot')
-
-    # Assuming test_data is already stored in session from the homepage route
-    test_data = session.get('test_data')
-
-    if test_data is None:
-        return "Test data is not available. Please upload a file first."
-
-    # Convert test data back into a DataFrame
-    test_data = pd.DataFrame(test_data)
-
-    # Preprocess test data for correlation calculation
-    numeric_data = test_data.select_dtypes(include=[np.float64, np.int64, np.uint8])
-    if 'GENDER_1' in test_data.columns and 'ENROLLMENT STATUS_1' in test_data.columns:
-        numeric_data = pd.concat([numeric_data, test_data[['GENDER_1', 'ENROLLMENT STATUS_1']]], axis=1)
-    numeric_data = numeric_data.drop(columns=['YEAR LEVEL', 'STUDENT NO'], errors='ignore')
+    if 'user_id' not in session:
+        flash("Please log in to view metrics.", "warning")
+        return redirect(url_for('login'))
     
-    # Calculate correlation matrix
-    corr_matrix = numeric_data.corr()
+    user_id = session.get('user_id')
+    
+    user_id = session['user_id']
+    user_metrics = UserMetrics.query.filter_by(user_id=user_id).order_by(UserMetrics.timestamp.desc()).first()
 
-    # Generate categorized interpretations (positive, neutral, negative)
-    positive_correlations, neutral_correlations, negative_correlations = generate_heatmap_interpretation(corr_matrix)
+    # Debugging: Check if metrics were found
+    if not user_metrics:
+        print(f"No metrics found for user {user_id}.")
+        flash("No metrics available for this user.", "warning")
+        return redirect(url_for('homepage'))
 
-    # Render the metricspage.html with the available plots and categorized correlations
+    # If metrics are found, render the metricspage.html
+    feature_importance_plot = user_metrics.feature_importance_plot
+    correlation_heatmap_plot = user_metrics.correlation_heatmap_plot
+    retention_by_course_plot = user_metrics.retention_by_course_plot
+    accuracy_by_course_plot = user_metrics.accuracy_by_course_plot
+
     return render_template(
         'metricspage.html',
         feature_importance=feature_importance_plot,
         correlation_heatmap=correlation_heatmap_plot,
         retention_by_course=retention_by_course_plot,
-        accuracy_by_course=accuracy_by_course_plot,
-        positive_correlations=positive_correlations,
-        neutral_correlations=neutral_correlations,
-        negative_correlations=negative_correlations
+        accuracy_by_course=accuracy_by_course_plot
     )
+
+@app.route('/output', methods=['GET'])
+def output():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash("Please log in to view results.", "warning")
+        return redirect(url_for('login'))
+
+    # Get the logged-in user's results
+    user_id = session['user_id']
+    result_entry = UserResults.query.filter_by(user_id=user_id).order_by(UserResults.timestamp.desc()).first()
+
+    if result_entry:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(result_entry.result_file))
+    else:
+        flash("No saved results available for this user.", "warning")
+        return redirect(url_for('homepage'))
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
         
         # Check if the user exists in the database
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
         
         # If user exists, check password
         if user and check_password_hash(user.password, password):
-            session['username'] = username
+            session['email'] = email
             session['user_id'] = user.id
+            session['role'] = user.role  # Store the role in the session
 
             # Log the login activity
             activity = ActivityLog(user_id=user.id, activity="login", timestamp=datetime.utcnow())
@@ -485,37 +506,66 @@ def login():
             db.session.commit()
 
             flash('Login successful!', 'success')
-            return redirect(url_for('homepage'))
+
+            # Redirect admin users to a special admin page
+            if user.role == 'admin':
+                return redirect(url_for('homepage'))
+            else:
+                return redirect(url_for('login'))
         else:
             flash('Invalid credentials, please try again.', 'danger')
             return redirect(url_for('login'))
     
     return render_template('login.html')
 
+
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
         
-        # Check if the username already exists
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists!', 'danger')
+        # Check if the email already exists
+        if User.query.filter_by(email=email).first():
+            flash('Email already exists!', 'danger')
             return redirect(url_for('register'))
         
+        # Check if the email contains "@admin" to allow registration
+        if "@admin.hau.edu.ph" in email:
+            role = 'admin'
+        else:
+            flash('You are not allowed to register. Only admins are permitted.', 'danger')
+            return redirect(url_for('login'))
+
         # Hash the password using pbkdf2:sha256
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(username=username, password=hashed_password)
+        new_user = User(email=email, password=hashed_password, role=role)  # Set the role for the user
         
         db.session.add(new_user)
         db.session.commit()
 
-        print(f"New user registered: {username}")  # Debugging line
-        
-        flash('User registered successfully!', 'success')
+        flash('Admin user registered successfully!', 'success')
         return redirect(url_for('login'))
     
     return render_template('register.html')
+
+@app.route('/activity_logs')
+def activity_logs():
+    if 'role' in session and session['role'] == 'admin':
+        # Query all activity logs
+        logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).all()
+        return render_template('activity_logs.html', logs=logs)
+    else:
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('login'))
+
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    if 'email' not in session or session.get('role') != 'admin':
+        flash('Access denied. Admins only.', 'danger')
+        return redirect(url_for('login'))
+
+    return render_template('homepage')  # Admin dashboard template
 
 @app.route('/logout')
 def logout():
@@ -524,9 +574,44 @@ def logout():
         db.session.add(activity)
         db.session.commit()
         
-    session.pop('username', None)
+    session.pop('email', None)
     flash('You have been logged out!', 'info')
     return redirect(url_for('login'))
+
+@app.route('/download/<filename>')
+def download(filename):
+    if 'email' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('login'))
+
+    # Log the download activity
+    if 'user_id' in session:
+        utc_timestamp = datetime.now(pytz.UTC)  # Generate timezone-aware UTC timestamp
+        activity = DownloadHistory(user_id=session['user_id'], file_name=filename, timestamp=utc_timestamp)
+        db.session.add(activity)
+        db.session.commit()  # Make sure you commit the changes
+
+    # Send the file for download
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/history')
+def history():
+    if 'email' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('login'))
+
+    # Get the current user's upload history from the database
+    user_id = session['user_id']
+    upload_history = UploadHistory.query.filter_by(user_id=user_id).order_by(UploadHistory.timestamp.desc()).all()
+
+    return render_template('history.html', upload_history=upload_history)
+
+@app.route('/save_progress', methods=['POST'])
+def save_progress():
+    # Get form data from request and store in session or database
+    form_data = request.form.to_dict()
+    session['progress'] = form_data  # Example: Storing in Flask session
+    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     app.run(debug=True)

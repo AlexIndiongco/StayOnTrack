@@ -13,6 +13,11 @@
             font-family: Arial, sans-serif;
             padding: 0;
             background: #d1d1d1;
+            margin-top: 70px; /* Add this line to create space equal to the navbar height */
+        }
+
+        .navbar {
+            height: 70px; /* Ensure you set a height for the navbar */
         }
 
         .retention-box {
@@ -220,7 +225,7 @@
         }
 
         .dashboard-box {
-            width: 22%; /* Adjust width for 4 containers */
+            width: 20%; /* Adjust width for 4 containers */
             padding: 20px;
             background-color: white;
             border-radius: 10px;
@@ -228,6 +233,11 @@
             text-align: center;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             margin-top: 70px;
+
+            display: flex;
+            justify-content: center; /* Horizontal centering */
+            align-items: center; /* Vertical centering */
+            flex-direction: column;
             
         }
 
@@ -305,6 +315,32 @@
 
         <!-- 2nd Container: Total Number of Students -->
         <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
+            <h6>Year Level</h6>
+            <div>
+                {% if year_levels %}
+                    {% for year in year_levels %}
+                        <h3>
+                            {% if loop.index == 1 %}
+                                1st Year
+                            {% elif loop.index == 2 %}
+                                2nd Year
+                            {% elif loop.index == 3 %}
+                                3rd Year
+                            {% elif loop.index == 4 %}
+                                4th Year
+                            {% else %}
+                                {{ loop.index }}th Year
+                            {% endif %}
+                        </h3>
+                    {% endfor %}
+                {% else %}
+                    <h3>N/A</h3>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 2nd Container: Total Number of Students -->
+        <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
             <h6>Total Students</h6>
             <h3>{{ total_students }}</h3>
         </div>
@@ -318,7 +354,7 @@
         <!-- 4th Container: Real Retention Rate -->
         <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
             <h6>Real Retention Rate</h6>
-            <h3>{{ "%.2f" % real_retention_rate }}% | {{ real_retained_students }} <span class="small-text">students retained</span></h3>
+            <h3>{{ "%.2f" % real_retention_rate }}% | {{ real_retained_students }} <span class="small-text">students</span></h3>
         </div>
     </section>
 
@@ -369,7 +405,7 @@
                             <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" required />
                         </div>
                         <a
-                            href="{{ url_for('download_file', filename='sample_file.xlsx') }}"
+                            href="{{ url_for('download_file', filename='download_sample_file.xlsx') }}"
                             class="btn bg-dark bg-opacity-75 dl_sample"
                         >Download sample .xlsx</a>
                         <button type="submit" class="btn btn-primary">Submit</button>

@@ -13,6 +13,11 @@
             font-family: Arial, sans-serif;
             padding: 0;
             background: #d1d1d1;
+            margin-top: 70px; /* Add this line to create space equal to the navbar height */
+        }
+
+        .navbar {
+            height: 70px; /* Ensure you set a height for the navbar */
         }
 
         /* Updated overall retention container to be wider */
@@ -124,9 +129,6 @@
             font-size: 1.8rem;
         }
 
-       
-
-
         /* Chart container styles */
         .chart-container {
             flex: 1 1 calc(50% - 20px);
@@ -177,7 +179,6 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            margin-bottom: 150px;
             height: 50vh;
             display: flex;
             align-items: center;
@@ -214,7 +215,107 @@
             justify-content: center;
         }
 
+        .info-symbol {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #007BFF;
+            border: 1px solid #007BFF;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            line-height: 20px;
+            vertical-align: top;
+        }
 
+        /* Tooltip container styling */
+        .info-symbol .tooltip {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 5px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Positioning the tooltip above the symbol */
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* Tooltip arrow */
+        .info-symbol .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        /* Show the tooltip on hover */
+        .info-symbol:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Chart container styles */
+        .chart-container {
+            flex: 1 1 calc(50% - 20px);
+            margin: 10px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        #general-data-section {
+            margin-top: 150px; /* Adjust based on the actual height of the navbar */
+        }
+
+        .white-bg-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+.positive-container {
+    background-color: #FF9999;
+    padding: 20px;
+    border-radius: 10px;
+    height: 400px;
+    overflow-y: scroll;
+}
+
+.neutral-container {
+    background-color: #CCF2FF;
+    padding: 20px;
+    border-radius: 10px;
+    height: 400px;
+    overflow-y: scroll;
+}
+
+.negative-container {
+    background-color: #99CCFF;
+    padding: 20px;
+    border-radius: 10px;
+    height: 400px;
+    overflow-y: scroll;
+}
+
+ul.list-unstyled {
+    line-height: 1.8;
+}
     </style>
 </head>
 <body>
@@ -259,6 +360,161 @@
         </nav>
     </section>
 
+    <section id="general-data-section" class="container">
+
+        <h2 class="text-center">General Data</h2>
+        <div class="row">
+            <!-- Retention Rate by Course -->
+            <div class="col-lg-6 col-md-12 chart-container">
+                <div class="chart">
+                    <h2>Retention Rate by Course
+                        <span class="info-symbol">i
+                            <div class="tooltip">This chart shows the retention rate by course over a specific period.</div>
+                        </span>
+                    </h2>
+                    <img src="data:image/png;base64,{{ retention_by_course }}" alt="Retention Rate by Course">
+                </div>
+            </div>
+
+            <!-- Accuracy Rate of Retention Prediction by Course -->
+            <div class="col-lg-6 col-md-12 chart-container">
+                <div class="chart">
+                    <h2>Retention Prediction Accuracy
+                        <span class="info-symbol">i
+                            <div class="tooltip">This chart displays the accuracy of the retention prediction by course.</div>
+                        </span>
+                    </h2>
+                    <img src="data:image/png;base64,{{ accuracy_by_course }}" alt="Accuracy Rate of Retention Prediction by Course">
+                </div>
+            </div>
+        </div>
+        
+        <h2 class="text-center">Features</h2>
+        <div class="row">
+            <!-- Feature Importance -->
+            <div class="col-lg-6 col-md-12 chart-container">
+                <div class="chart">
+                    <h2>Feature Importance
+                        <span class="info-symbol">i
+                            <div class="tooltip">This chart ranks the importance of features used in the model prediction.</div>
+                        </span>
+                    </h2>
+                    <img src="data:image/png;base64,{{ feature_importance }}" alt="Feature Importance">
+                </div>
+            </div>
+
+            <!-- Heatmap -->
+            <div class="col-lg-6 col-md-12 chart-container">
+                <div class="chart">
+                    <h2>Feature Correlation (Heatmap)
+                        <span class="info-symbol">i
+                            <div class="tooltip">This heatmap shows the correlation between different features. Positive correlations are shown in red, while negative correlations are in blue. The color intensity indicates the strength of the correlation, where 1 represents a perfect positive correlation and -1 represents a perfect negative correlation.</div>
+                        </span>
+                    </h2>
+                    <img src="data:image/png;base64,{{ correlation_heatmap }}" alt="Heatmap (Feature Correlation)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Interpretation Section -->
+        <h2 class="text-center">Heatmap Interpretation</h2>
+
+        <div class="container white-bg-container" style="background-color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2 class="text-center">Categorized Correlations</h2>
+            <div class="row justify-content-center">
+                <!-- Positive Correlations (Pastel Red) -->
+                <div class="col-lg-4 col-md-4">
+                    <div class="positive-container" style="background-color: #FF9999; padding: 20px; border-radius: 10px; text-align: center; height: 400px; overflow-y: scroll;">
+                        <h3 style="font-size: 2rem; font-weight: bold;">Positive Correlations (>= 0.10)</h3><br>
+                        <ul class="list-unstyled" style="line-height: 1.8;">
+                            {% for item in positive_correlations %}
+                                {% if loop.index0 < 3 %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% else %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Neutral Correlations (Pastel Light Blue) -->
+                <div class="col-lg-4 col-md-4">
+                    <div class="neutral-container" style="background-color: #CCF2FF; padding: 20px; border-radius: 10px; text-align: center; height: 400px; overflow-y: scroll;">
+                        <h3 style="font-size: 2rem; font-weight: bold;">Neutral Correlations <br>(-0.10 < correlation < 0.10)</h3><br>
+                        <ul class="list-unstyled" style="line-height: 1.8;">
+                            {% for item in neutral_correlations %}
+                                {% if loop.index0 < 3 %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% else %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Negative Correlations (Pastel Blue) -->
+                <div class="col-lg-4 col-md-4">
+                    <div class="negative-container" style="background-color: #99CCFF; padding: 20px; border-radius: 10px; text-align: center; height: 400px; overflow-y: scroll;">
+                        <h3 style="font-size: 2rem; font-weight: bold;">Negative Correlations (<= -0.10)</h3><br>
+                        <ul class="list-unstyled" style="line-height: 1.8;">
+                            {% for item in negative_correlations %}
+                                {% if loop.index0 < 3 %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% else %}
+                                    <li style="font-size: 1.4rem;">{{ item[0] }} and {{ item[1] }}: {{ item[2] | round(2) }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="text-center">Verbal Interpretation</h2>
+
+                <div class="row justify-content-center">
+                    <!-- Positive Interpretation -->
+                    <div class="col-lg-4 col-md-4">
+                        <div class="positive-container">
+                            <h3>Positive Correlations Interpretation</h3>
+                            <ul class="list-unstyled">
+                                {% for interpretation in positive_interpretations[:5] %}
+                                    <li>{{ interpretation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Neutral Interpretation -->
+                    <div class="col-lg-4 col-md-4">
+                        <div class="neutral-container">
+                            <h3>Neutral Correlations Interpretation</h3>
+                            <ul class="list-unstyled">
+                                {% for interpretation in neutral_interpretations[:5] %}
+                                    <li>{{ interpretation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Negative Interpretation -->
+                    <div class="col-lg-4 col-md-4">
+                        <div class="negative-container">
+                            <h3>Negative Correlations Interpretation</h3>
+                            <ul class="list-unstyled">
+                                {% for interpretation in negative_interpretations[:5] %}
+                                    <li>{{ interpretation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+
+    </section>
+
     <!-- Input Section -->
     <section id="input" class="py-5 bg-light">
         <div class="container d-flex align-items-center justify-content-center" style="height: 300px;">
@@ -271,7 +527,7 @@
                             <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" required />
                         </div>
                         <a
-                            href="{{ url_for('download_file', filename='sample_file.xlsx') }}"
+                            href="{{ url_for('download_file', filename='download_sample_file.xlsx') }}"
                             class="btn bg-dark bg-opacity-75 dl_sample"
                         >Download sample .xlsx</a>
                         <button type="submit" class="btn btn-primary">Submit</button>
@@ -280,47 +536,6 @@
             </div>
         </div>
     </section>
-
-    <div class="container">
-
-
-        <h2 class="text-center">General Data</h2>
-        <div class="row">
-            <!-- Retention Rate by Course -->
-            <div class="col-lg-6 col-md-12 chart-container">
-                <div class="chart">
-                    <h2>Retention Rate by Course</h2>
-                    <img src="data:image/png;base64,{{ retention_by_course }}" alt="Retention Rate by Course">
-                </div>
-            </div>
-
-            <!-- Accuracy Rate of Retention Prediction by Course -->
-            <div class="col-lg-6 col-md-12 chart-container">
-                <div class="chart">
-                    <h2>Accuracy Rate of Retention Prediction by Course</h2>
-                    <img src="data:image/png;base64,{{ accuracy_by_course }}" alt="Accuracy Rate of Retention Prediction by Course">
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Feature Importance -->
-            <div class="col-lg-6 col-md-12 chart-container">
-                <div class="chart">
-                    <h2>Feature Importance</h2>
-                    <img src="data:image/png;base64,{{ feature_importance }}" alt="Feature Importance">
-                </div>
-            </div>
-
-            <!-- Heatmap -->
-            <div class="col-lg-6 col-md-12 chart-container">
-                <div class="chart">
-                    <h2>Heatmap (Feature Correlation)</h2>
-                    <img src="data:image/png;base64,{{ correlation_heatmap }}" alt="Heatmap (Feature Correlation)">
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Bootstrap JS and dependencies (Optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
