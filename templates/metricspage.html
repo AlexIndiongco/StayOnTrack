@@ -346,20 +346,16 @@ ul.list-unstyled {
                 </button>
 
                 <!-- Collapsible menu -->
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <!-- <li class="nav-item">  
-                            <a class="nav-link" href="{{ url_for('metricspage') }}">Prediction</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Metrics</a>
-                        </li> -->
-                    </ul>
+                <div>
+                    <button class="btn btn-outline-secondary ms-3" onclick="captureResults()">
+                        Download Metrics
+                    </button>
                 </div>
             </div>
         </nav>
     </section>
 
+<div id="results-section">
     <section id="general-data-section" class="container">
 
         <h2 class="text-center">General Data</h2>
@@ -511,10 +507,8 @@ ul.list-unstyled {
                     </div>
                 </div>
         </div>
-
-
     </section>
-
+</div>
     <!-- Input Section -->
     <section id="input" class="py-5 bg-light">
         <div class="container d-flex align-items-center justify-content-center" style="height: 300px;">
@@ -536,6 +530,38 @@ ul.list-unstyled {
             </div>
         </div>
     </section>
+
+    <!-- Saving User Progress -->
+    <script>
+      function saveProgress() {
+          const formData = new FormData(document.getElementById('file-upload-form'));
+      
+          // Send the data to the server for autosaving
+          fetch('/save_progress', {
+              method: 'POST',
+              body: formData,
+          }).then(response => response.json())
+          .then(data => {
+              console.log('Progress saved:', data);
+          });
+      }
+      
+      // Save progress every 30 seconds
+      setInterval(saveProgress, 30000);  // 30-second interval
+    </script>
+
+    <!-- HTML2Canvas Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        function captureResults() {
+            html2canvas(document.getElementById('results-section')).then(function(canvas) {
+                var link = document.createElement('a');
+                link.href = canvas.toDataURL();
+                link.download = 'Metrics.png';
+                link.click();
+            });
+        }
+    </script>
 
     <!-- Bootstrap JS and dependencies (Optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

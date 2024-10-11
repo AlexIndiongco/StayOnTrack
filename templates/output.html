@@ -12,7 +12,7 @@
         body {
             font-family: Arial, sans-serif;
             padding: 0;
-            background: #d1d1d1;
+            background: #959595;
             margin-top: 70px; /* Add this line to create space equal to the navbar height */
         }
 
@@ -221,7 +221,7 @@
         display: flex;
         justify-content: space-around;
         padding: 20px;
-        background: #d1d1d1;
+        background: #959595;
         }
 
         .dashboard-box {
@@ -300,11 +300,16 @@
                         </li>
                     </ul>
                 </div>
+                <div>
+                    <button class="btn btn-outline-secondary ms-3" onclick="captureResults()">
+                        Download Results
+                    </button>
+                </div>
             </div>
         </nav>
     </section>
 
-
+<div id="results-section">
     <!-- Dashboard Section -->
     <section id="dashboard" class="d-flex justify-content-around mt-3 mb-4">
         <!-- 1st Container: School Year and Institute -->
@@ -313,7 +318,7 @@
             <h3>{{ institute }} | {{ school_year }}</h3>
         </div>
 
-        <!-- 2nd Container: Total Number of Students -->
+        <!-- 2nd Container: Year Level -->
         <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
             <h6>Year Level</h6>
             <div>
@@ -342,7 +347,7 @@
         <!-- 2nd Container: Total Number of Students -->
         <div class="dashboard-box shadow-sm p-3 mb-5 rounded text-center">
             <h6>Total Students</h6>
-            <h3>{{ total_students }}</h3>
+            <h3>{{ overall_total_students }}</h3>
         </div>
 
         <!-- 3rd Container: Total Number of Courses -->
@@ -358,40 +363,93 @@
         </div>
     </section>
 
-    <div class="container">
-        <h2 class="text-center">Retention Prediction Summary</h2>
+    <!-- Carousel Section -->
+    <div id="retentionCarousel" class="carousel slide" data-ride="carousel" data-interval="false">
+        <div class="carousel-inner">
+            <!-- First slide: Overall retention prediction -->
+            <div class="carousel-item active">
+                <h2 class="text-center">Retention Prediction Summary (Overall)</h2>
 
-        <!-- Retention Rate Container -->
-        <div class="container-fluid d-flex justify-content-center align-items-center mt-4">
-            <!-- Overall Retention Rate Container -->
-            <div class="retention-box shadow-sm p-4 text-center" style="margin-right: 20px;">
-                <h3>{{ "%.2f" % predicted_retention_rate }}%</h3>
-                <h5>Predicted Overall Retention Rate</h5>
-            </div>
-        
-            <!-- Number of Students Predicted to Retain -->
-            <div class="retention-box shadow-sm p-4 text-center">
-                <h3>{{ predicted_retained_students }}</h3>
-                <h5>Predicted Retained Students</h5>
-            </div>
-        </div>
+                <div class="container-fluid d-flex justify-content-center align-items-center mt-4">
+                    <!-- Overall Retention Rate Container -->
+                    <div class="retention-box shadow-sm p-4 text-center" style="margin-right: 20px;">
+                        <h3>{{ "%.2f" % overall_predicted_retention_rate }}%</h3>
+                        <h5>Predicted Overall Retention Rate</h5>
+                    </div>
 
-        <!-- Retention by Course Section -->
-        {% if retention_by_course_summary %}
-        <div class="course-summary">
-            {% for course_summary in retention_by_course_summary %}
-                <div class="course-box">
-                    <div class="predicted">{{ course_summary.predicted_retained_students }}<span class="grey-text-predicted">/{{ course_summary.total_students }}</span></div>
-                    <div class="subtext">{{ course_summary.course }} students predicted to retain</div>
-                    <div class="real-and-distribution">
-                        <div class="real-retention">{{ course_summary.real_retained_students }}<br>confirmed retained</div>
-                        <div class="distribution">{{ "%.2f" % course_summary.retention_distribution }}%<br>Retention Distribution</div>
+                    <!-- Number of Students Predicted to Retain -->
+                    <div class="retention-box shadow-sm p-4 text-center">
+                        <h3>{{ overall_predicted_retained_students }}</h3>
+                        <h5>Predicted Retained Students</h5>
                     </div>
                 </div>
+
+                <!-- Retention by Course Section -->
+                {% if retention_by_course_summary %}
+                <div class="course-summary">
+                    {% for course_summary in retention_by_course_summary %}
+                    <div class="course-box">
+                        <div class="predicted">{{ course_summary.predicted_retained_students }}<span class="grey-text-predicted">/{{ course_summary.total_students }}</span></div>
+                        <div class="subtext">{{ course_summary.course }} students predicted to retain</div>
+                        <div class="real-and-distribution">
+                            <div class="real-retention">{{ course_summary.real_retained_students }}<br>confirmed retained</div>
+                            <div class="distribution">{{ "%.2f" % course_summary.retention_distribution }}%<br>Retention Distribution</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Additional slides: Year-level retention predictions -->
+            {% for prediction in year_level_predictions %}
+            <div class="carousel-item">
+                <h2 class="text-center">Retention Prediction Summary (Year {{ prediction.year_level }})</h2>
+
+                <div class="container-fluid d-flex justify-content-center align-items-center mt-4">
+                    <!-- Year Level Retention Rate Container -->
+                    <div class="retention-box shadow-sm p-4 text-center" style="margin-right: 20px;">
+                        <h3>{{ "%.2f" % prediction.retention_rate }}%</h3>
+                        <h5>Year {{ prediction.year_level }} Predicted Retention Rate</h5>
+                    </div>
+
+                    <!-- Number of Students Predicted to Retain for Year Level -->
+                    <div class="retention-box shadow-sm p-4 text-center">
+                        <h3>{{ prediction.predicted_retained_students }} out of {{ prediction.total_students }} students predicted to retain</h3>
+                        <h5>Year {{ prediction.year_level }} Predicted Retained Students</h5>
+                    </div>
+                </div>
+
+                <!-- Retention by Course for Year Level -->
+                {% if year_level_course_summary[prediction.year_level] %}
+                <div class="course-summary">
+                    {% for course_summary in year_level_course_summary[prediction.year_level] %}
+                    <div class="course-box">
+                        <div class="predicted">{{ course_summary.predicted_retained_students }}<span class="grey-text-predicted">/{{ course_summary.total_students }}</span></div>
+                        <div class="subtext">{{ course_summary.course }} students predicted to retain (Year {{ prediction.year_level }})</div>
+                        <div class="real-and-distribution">
+                            <div class="real-retention">{{ course_summary.real_retained_students }}<br>confirmed retained</div>
+                            <div class="distribution">{{ "%.2f" % course_summary.retention_distribution }}%<br>Retention Distribution</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
-        {% endif %}
+
+        <!-- Carousel controls -->
+        <a class="carousel-control-prev" href="#retentionCarousel" role="button" data-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="sr-only">Previous</span>
+        </a>
+        <a class="carousel-control-next" href="#retentionCarousel" role="button" data-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="sr-only">Next</span>
+        </a>
     </div>
+</div>
 
     <!-- Input Section Moved to Bottom -->
     <section id="input" class="py-5 bg-light">
@@ -415,6 +473,38 @@
         </div>
     </section>
 
+    <!-- Saving User Progress -->
+    <script>
+        function saveProgress() {
+            const formData = new FormData(document.getElementById('file-upload-form'));
+        
+            // Send the data to the server for autosaving
+            fetch('/save_progress', {
+                method: 'POST',
+                body: formData,
+            }).then(response => response.json())
+            .then(data => {
+                console.log('Progress saved:', data);
+            });
+        }
+        
+        // Save progress every 30 seconds
+        setInterval(saveProgress, 30000);  // 30-second interval
+        </script>
+
+    <!-- HTML2Canvas Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        function captureResults() {
+            html2canvas(document.getElementById('results-section')).then(function(canvas) {
+                var link = document.createElement('a');
+                link.href = canvas.toDataURL();
+                link.download = 'Results.png';
+                link.click();
+            });
+        }
+    </script>
+    
     <!-- Bootstrap JS and dependencies (Optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>

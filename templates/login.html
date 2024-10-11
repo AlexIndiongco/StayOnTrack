@@ -135,10 +135,10 @@ form .row input::placeholder {
 </style>
 </head>
 <body>
-  {% if session.username %}
+  {% if session.email %}
   <div class="wrapper" style="display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center; background-color: #cd982f;">
       <h2>Logged in</h2>
-      <p>Welcome, {{ session.username }}</p>
+      <p>Welcome, {{ session.email }}</p>
       <a href="{{ url_for('logout') }}">Logout</a>
   </div>
   {% else %}
@@ -161,7 +161,7 @@ form .row input::placeholder {
           <form method="POST" action="{{ url_for('login') }}" id="auth-form">
               <div class="row">
                   <i class="fas fa-user"></i>
-                  <input type="text" name="username" id="username" placeholder="Username" required />
+                  <input type="text" name="email" id="email" placeholder="Email" required />
               </div>
               <div class="row">
                   <i class="fas fa-lock"></i>

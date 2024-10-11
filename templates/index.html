@@ -244,6 +244,15 @@
               <li class="nav-item">
                 <a href="#developers" class="nav-link">Developers</a>
               </li>
+              <li class="nav-item">
+                <a href="/history" class="nav-link" role="button">History</a>
+              </li>
+              <li class="nav-item">
+                <a href="{{ url_for('output') }}" class="nav-link active" role="button">View Results</a>
+              </li>
+              <li class="nav-item">
+                <a href="{{ url_for('metricspage') }}" class="nav-link active" role="button">View Metrics</a>
+              </li>
             </ul>
             <a href="javascript:void(0)" id="get-started-btn" class="btn btn-primary ms-auto" role="button">Get Started</a>
             <a href="/logout" class="btn btn-outline-secondary ms-3" role="button">Logout</a>
@@ -468,6 +477,25 @@
       }
     </script>
 
+    <!-- Saving User Progress -->
+    <script>
+      function saveProgress() {
+          const formData = new FormData(document.getElementById('file-upload-form'));
+      
+          // Send the data to the server for autosaving
+          fetch('/save_progress', {
+              method: 'POST',
+              body: formData,
+          }).then(response => response.json())
+          .then(data => {
+              console.log('Progress saved:', data);
+          });
+      }
+      
+      // Save progress every 30 seconds
+      setInterval(saveProgress, 30000);  // 30-second interval
+    </script>
+  
     <!-- Bootstrap JS -->
     <script
       src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"

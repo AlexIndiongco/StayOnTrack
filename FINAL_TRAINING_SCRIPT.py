@@ -27,6 +27,8 @@ def train_model(filepath):
         )
         all_data = all_data.reset_index(drop=True)
 
+        if 'YEAR LEVEL' not in all_data.columns:
+            print("YEAR LEVEL column is missing in the dataset. Skipping year-level predictions.")
         return all_data
 
     # Load the data
@@ -65,8 +67,10 @@ def train_model(filepath):
     float_columns = all_data.select_dtypes(include=['float64']).columns
     all_data[float_columns] = all_data[float_columns].round(6)
 
-    # Select predictors
-    predictors = ['PASSED', 'FAILED', 'GPA', 'AGE'] + list(all_data.columns[all_data.columns.str.startswith('GENDER')]) + list(all_data.columns[all_data.columns.str.startswith('ENROLLMENT STATUS')])
+    # Select predictors (do not include 'YEAR LEVEL')
+    predictors = ['PASSED', 'FAILED', 'GPA', 'AGE'] + \
+                 list(all_data.columns[all_data.columns.str.startswith('GENDER')]) + \
+                 list(all_data.columns[all_data.columns.str.startswith('ENROLLMENT STATUS')])
 
     X = all_data[predictors]
     y = all_data['RETAINED']
@@ -263,7 +267,23 @@ def train_model(filepath):
     # Save accuracy rate plot
     plt.savefig('models/accuracy_rate_by_course.png')
 
+    ### PREDICT RETENTION FOR EACH YEAR LEVEL ###
+    if 'YEAR LEVEL' in all_data.columns:
+        year_levels = all_data['YEAR LEVEL'].unique()
+        retention_by_year = {}
 
+        for year_level in year_levels:
+            year_data = all_data[all_data['YEAR LEVEL'] == year_level]
+            X_year = imputer.transform(year_data[predictors])
+            y_year_pred = model.predict(X_year)
+
+            predicted_retained = sum(y_year_pred)
+            retention_rate = (predicted_retained / len(y_year_pred)) * 100
+            retention_by_year[year_level] = retention_rate
+            print(f"Year {year_level}: Predicted Retention Rate = {retention_rate:.2f}%")
+    else:
+        print("Skipping year-level predictions as YEAR LEVEL column is missing.")
+    
     print("Model, plots, and metadata saved successfully.")
 
 # Call the train_model function
