@@ -1,4 +1,4 @@
-**StayOnTrack is a Web-Application built for our THESIS. Used to predict the Student Rentention of School of Engineering and Architecture Students at Holy Angel University.**
+**StayOnTrack is a Web-Application built for our Thesis that is used to predict the Student Rentention of School of Engineering and Architecture Students at Holy Angel University.**
 
 **Members:**
 Ghislain Kean O. David, 
